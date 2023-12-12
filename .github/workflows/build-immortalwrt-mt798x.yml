@@ -14,10 +14,6 @@ permissions: write-all
 # 开启写权限，防止无法上传到release
 
 on:
-  repository_dispatch:
-  schedule:
-   - cron: 0 18 * * 5
-   # 分,时,日,月,星期。每周五 18 时执行一次 (UTC时间)
   workflow_dispatch:
     inputs:
       USE_MTWIFI_CFG:
@@ -91,6 +87,10 @@ jobs:
     - name: 更新 & 安装 feeds & 执行脚本
       run: |
         cd openwrt
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        git fetch https://github.com/padavanonly/immortalwrt-mt798x
+        git merge FETCH_HEAD
         ./scripts/feeds update -a && ./scripts/feeds install -a        
         chmod +x $GITHUB_WORKSPACE/$DIY_SH && $GITHUB_WORKSPACE/$DIY_SH
 
@@ -108,13 +108,14 @@ jobs:
       if: env.USE_NX30PRO_EEPROM == 'true'
       run: |
         mkdir openwrt/target/linux/mediatek/mt7981/base-files/lib/firmware
-        cp bin/nx30pro_eeprom.bin openwrt/target/linux/mediatek/mt7981/base-files/lib/firmware/MT7981_iPAiLNA_EEPROM.bin
+        cp eeprom/nx30pro_eeprom.bin openwrt/target/linux/mediatek/mt7981/base-files/lib/firmware/MT7981_iPAiLNA_EEPROM.bin
         sed -i 's/caldata_extract_mmc/# caldata_extract_mmc/' openwrt/target/linux/mediatek/mt7981/base-files/lib/preinit/90_extract_caldata
         sed -i 's#./files/mt7981-default-eeprom/MT7981_iPAiLNA_EEPROM.bin##' openwrt/package/mtk/drivers/mt_wifi/Makefile
 
     - name: 设置 dts 闪存频率
       if: env.USE_52MHZ == 'true'
       run: |
+        sed -i -e '/bus-width = <8>;/ a\	cap-mmc-highspeed;' openwrt/target/linux/mediatek/files-5.4/arch/arm64/boot/dts/mediatek/mt7981-cmcc-rax3000m-emmc.dts
         sed -i 's/26000000/52000000/g' openwrt/target/linux/mediatek/files-5.4/arch/arm64/boot/dts/mediatek/mt7981-cmcc-rax3000m-emmc.dts
         grep max-frequency openwrt/target/linux/mediatek/files-5.4/arch/arm64/boot/dts/mediatek/mt7981-cmcc-rax3000m-emmc.dts
 
